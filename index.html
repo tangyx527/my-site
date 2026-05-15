@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 公主牛马大乱斗</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .game-title {
+            text-align: center;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255,255,255,0.5);
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .phase-select {
+            display: block;
+        }
+        
+        .phase-battle, .phase-result {
+            display: none;
+        }
+        
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .character-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .character-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
+        .character-card:hover::after {
+            content: '👆 点击查看技能';
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .character-card.selected {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255,215,0,0.8);
+            border: 4px solid gold;
+        }
+        
+        .character-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            object-fit: cover;
+            border: 4px solid;
+        }
+        
+        .character-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .character-hp {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .character-skills-preview {
+            font-size: 0.85rem;
+            color: #666;
+            text-align: left;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        .skill-preview {
+            margin: 5px 0;
+            padding: 3px 0;
+        }
+        
+        .battle-area {
+            background: rgba(255,255,255,0.95);
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .battle-field {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 30px;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .battle-character {
+            text-align: center;
+            padding: 20px;
+            border-radius: 20px;
+            background: #f8f9fa;
+        }
+        
+        .battle-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid;
+            margin-bottom: 15px;
+        }
+        
+        .hp-bar, .energy-bar {
+            height: 25px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 10px 0;
+            background: #ddd;
+        }
+        
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .vs-sign {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 0 0 20px rgba(231,76,60,0.5);
+            animation: vsPulse 1s infinite;
+        }
+        
+        @keyframes vsPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        .status-effects {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .status-icon {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .skill-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .skill-btn {
+            padding: 20px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .skill-btn:hover:not(:disabled) {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .skill-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .skill-btn.normal {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .skill-btn.skill {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+        
+        .skill-btn.ultimate {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .skill-cost {
+            font-size: 0.9rem;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        
+        .battle-log {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 15px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .log-player {
+            background: rgba(46, 204, 113, 0.2);
+            border-left: 4px solid #2ecc71;
+        }
+        
+        .log-enemy {
+            background: rgba(231, 76, 60, 0.2);
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .log-system {
+            background: rgba(155, 89, 182, 0.2);
+            border-left: 4px solid #9b59b6;
+        }
+        
+        .result-screen {
+            text-align: center;
+            padding: 50px;
+        }
+        
+        .result-text {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            animation: resultAnim 1s ease;
+        }
+        
+        @keyframes resultAnim {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .win { color: #2ecc71; }
+        .lose { color: #e74c3c; }
+        
+        .restart-btn {
+            padding: 20px 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .restart-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        
+        .damage-shake {
+            animation: shake 0.5s ease;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .hp-low {
+            animation: hpFlash 0.5s infinite;
+        }
+        
+        @keyframes hpFlash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .turn-indicator {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 15px;
+        }
+        
+        .player-turn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        
+        .enemy-turn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .select-hint {
+            text-align: center;
+            color: white;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            position: relative;
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 2rem;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            color: #e74c3c;
+        }
+        
+        .intro-title {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 25px;
+            padding-top: 10px;
+        }
+        
+        .intro-content {
+            font-size: 1.1rem;
+            line-height: 2;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .intro-content p {
+            margin: 10px 0;
+        }
+        
+        .character-detail-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .character-detail-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid;
+            margin-bottom: 15px;
+        }
+        
+        .character-detail-name {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .character-detail-nick {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .character-attrs {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .character-attrs span {
+            margin: 0 15px;
+        }
+        
+        .skill-detail-section {
+            margin-bottom: 15px;
+        }
+        
+        .skill-detail-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding: 8px 15px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .skill-detail-title.normal {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        
+        .skill-detail-title.skill {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+        
+        .skill-detail-title.ultimate {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .skill-detail-content {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-left: 15px;
+            font-size: 1rem;
+        }
+        
+        .skill-detail-content div {
+            margin: 5px 0;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+        
+        .modal-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+        
+        .modal-btn:hover {
+            transform: translateY(-3px);
+        }
+        
+        .modal-btn.primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        .modal-btn.secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+        
+        .modal-btn.success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .modal-btn.danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .confirm-text {
+            text-align: center;
+            font-size: 1.3rem;
+            color: #333;
+            margin: 30px 0;
+            line-height: 1.8;
+        }
+        
+        .confirm-name {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        /* 手机端适配 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .game-title {
+                font-size: 1.8rem;
+                margin-bottom: 15px;
+            }
+            
+            .character-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            
+            .character-card {
+                padding: 15px;
+                border-radius: 15px;
+            }
+            
+            .character-card:hover::after {
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+            
+            .character-avatar {
+                width: 80px;
+                height: 80px;
+                border-width: 3px;
+            }
+            
+            .character-name {
+                font-size: 1.1rem;
+            }
+            
+            .character-skills-preview {
+                display: none;
+            }
+            
+            .battle-area {
+                padding: 15px;
+                border-radius: 20px;
+            }
+            
+            .battle-field {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .vs-sign {
+                order: 2;
+                font-size: 1.5rem;
+                padding: 10px 30px;
+            }
+            
+            .battle-character {
+                padding: 15px;
+                border-radius: 15px;
+            }
+            
+            .battle-avatar {
+                width: 100px;
+                height: 100px;
+                border-width: 4px;
+            }
+            
+            .battle-character h2 {
+                font-size: 1.3rem;
+            }
+            
+            .hp-bar, .energy-bar {
+                height: 28px;
+                border-radius: 14px;
+            }
+            
+            .hp-fill span, .energy-fill span {
+                font-size: 0.85rem;
+            }
+            
+            .skill-buttons {
+                gap: 10px;
+            }
+            
+            .skill-btn {
+                padding: 12px;
+                font-size: 1rem;
+            }
+            
+            .skill-cost {
+                font-size: 0.75rem;
+            }
+            
+            .battle-log {
+                max-height: 180px;
+                font-size: 0.85rem;
+            }
+            
+            .modal-content {
+                margin: 10px;
+                padding: 20px;
+                max-width: 95vw !important;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            
+            .intro-title {
+                font-size: 1.4rem;
+            }
+            
+            .intro-content {
+                font-size: 0.95rem;
+            }
+            
+            .modal-buttons {
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .modal-btn {
+                padding: 12px 25px;
+                font-size: 1rem;
+                flex: 1;
+                min-width: 120px;
+            }
+            
+            .character-detail-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .character-detail-avatar {
+                width: 90px;
+                height: 90px;
+            }
+            
+            .character-detail-name {
+                font-size: 1.6rem;
+            }
+            
+            .character-detail-nick {
+                font-size: 1rem;
+            }
+            
+            .skill-detail-section {
+                padding: 12px;
+            }
+            
+            .skill-detail-content {
+                font-size: 0.9rem;
+            }
+            
+            .confirm-text {
+                font-size: 1.1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .game-title {
+                font-size: 1.5rem;
+            }
+            
+            .character-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .character-avatar {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .skill-buttons {
+                flex-direction: column;
+            }
+            
+            .skill-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="game-title">🎮 公主牛马大乱斗 🔥</h1>
+        
+        <div class="phase-select" id="phaseSelect">
+            <p class="select-hint">👇 选择你的英雄角色</p>
+            <div class="character-grid" id="characterGrid"></div>
+        </div>
+        
+        <div class="phase-battle" id="phaseBattle">
+            <div class="battle-area">
+                <div class="turn-indicator" id="turnIndicator">你的回合！</div>
+                
+                <div class="battle-field">
+                    <div class="battle-character" id="playerCard">
+                        <img class="battle-avatar" id="playerAvatar" src="">
+                        <h2 id="playerName"></h2>
+                        <div class="hp-bar">
+                            <div class="hp-fill" id="playerHpFill">
+                                <span id="playerHpText">100/100</span>
+                            </div>
+                        </div>
+                        <div class="energy-bar">
+                            <div class="energy-fill" id="playerEnergyFill">
+                                <span id="playerEnergyText">0/100</span>
+                            </div>
+                        </div>
+                        <div class="status-effects" id="playerStatus"></div>
+                    </div>
+                    
+                    <div class="vs-sign">VS</div>
+                    
+                    <div class="battle-character" id="enemyCard">
+                        <img class="battle-avatar" id="enemyAvatar" src="">
+                        <h2 id="enemyName"></h2>
+                        <div class="hp-bar">
+                            <div class="hp-fill" id="enemyHpFill">
+                                <span id="enemyHpText">100/100</span>
+                            </div>
+                        </div>
+                        <div class="energy-bar">
+                            <div class="energy-fill" id="enemyEnergyFill">
+                                <span id="enemyEnergyText">0/100</span>
+                            </div>
+                        </div>
+                        <div class="status-effects" id="enemyStatus"></div>
+                    </div>
+                </div>
+                
+                <div class="skill-buttons" id="skillButtons">
+                    <button class="skill-btn normal" id="btnNormal" onclick="playerAttack('normal')">
+                        <span id="normalSkillName">普攻</span>
+                        <div class="skill-cost">能量: 0</div>
+                    </button>
+                    <button class="skill-btn skill" id="btnSkill" onclick="playerAttack('skill')">
+                        <span id="skillName">技能</span>
+                        <div class="skill-cost" id="skillCostText">能量: 30</div>
+                    </button>
+                    <button class="skill-btn ultimate" id="btnUltimate" onclick="playerAttack('ultimate')">
+                        <span id="ultimateName">大招</span>
+                        <div class="skill-cost" id="ultimateCostText">能量: 80</div>
+                    </button>
+                </div>
+                
+                <div class="battle-log" id="battleLog"></div>
+            </div>
+        </div>
+        
+        <div class="phase-result" id="phaseResult">
+            <div class="battle-area result-screen">
+                <div class="result-text" id="resultText">🎉 胜利！</div>
+                <button class="restart-btn" onclick="restartGame()">🔄 再来一局</button>
+            </div>
+        </div>
+        
+        <div class="modal-overlay" id="introModal">
+            <div class="modal-content">
+                <span class="modal-close" onclick="closeIntroModal()">✕</span>
+                <div class="intro-title">🎮 公主牛马大乱斗 游戏说明</div>
+                <div class="intro-content">
+                    <p>1. 这是一款群成员的回合制对战游戏，请注意，这不是演习，严肃点</p>
+                    <p>2. 选择你喜欢的英雄，与电脑随机匹配的对手进行1v1对战</p>
+                    <p>3. 每回合恢复能量，消耗能量释放技能，先将对方血量打空即可获胜</p>
+                    <p>4. 每个英雄都有专属普攻、特色技能和大招，技能效果基于群梗设计</p>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn secondary" onclick="closeIntroModal();showAllCharacters()">查看所有角色</button>
+                    <button class="modal-btn primary" onclick="closeIntroModal()">开始游戏</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-overlay" id="detailModal">
+            <div class="modal-content" id="detailContent">
+            </div>
+        </div>
+        
+        <div class="modal-overlay" id="confirmModal">
+            <div class="modal-content" style="max-width: 450px;">
+                <span class="modal-close" onclick="closeConfirmModal()">✕</span>
+                <div class="confirm-text">
+                    确定要选择<br><span class="confirm-name" id="confirmCharacterName"></span><br>作为你的出战英雄吗？
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn secondary" onclick="closeConfirmModal()">取消</button>
+                    <button class="modal-btn success" onclick="confirmSelection()">确定出战</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-overlay" id="allCharactersModal">
+            <div class="modal-content" style="max-width: 800px; max-height: 85vh;">
+                <span class="modal-close" onclick="closeAllCharactersModal()">✕</span>
+                <div class="intro-title" style="padding-top: 0;">🎭 所有角色</div>
+                <div id="allCharactersContent" style="margin-top: 20px;"></div>
+                <div class="modal-buttons" style="margin-top: 20px;">
+                    <button class="modal-btn primary" onclick="closeAllCharactersModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const characters = [
+            {
+                id: 'tangyanxiang',
+                name: '汤燕祥',
+                nick: '汤燕祥',
+                hp: 120,
+                maxHp: 120,
+                energy: 0,
+                maxEnergy: 100,
+                energyPerTurn: 15,
+                image: '悲伤玉米排骨汤.jfif',
+                color: '#f39c12',
+                skills: {
+                    normal: { name: '🍲 排骨汤泼脸', damage: 12, cost: 0 },
+                    skill: { name: '💪 天天要有信心', damage: 0, cost: 30, effect: { type: 'heal', amount: 30, attackBuff: 0.3, turns: 2 } },
+                    ultimate: { name: '😡 悲伤爆发', damage: 60, cost: 90, effect: { type: 'skipNextTurn' } }
+                }
+            },
+            {
+                id: 'zhongxinyu',
+                name: '钟心雨',
+                nick: '野草',
+                hp: 100,
+                maxHp: 100,
+                energy: 0,
+                maxEnergy: 100,
+                energyPerTurn: 20,
+                image: '钟心雨.jfif',
+                color: '#9b59b6',
+                skills: {
+                    normal: { name: '🥥 圣诞岛椰子砸头', damage: 15, cost: 0 },
+                    skill: { name: '🌿 野草疯长', damage: 20, cost: 30, effect: { type: 'stun', turns: 1 } },
+                    ultimate: { name: '🎄 孤独圣诞夜', damage: 40, cost: 80, effect: { type: 'heal', amount: 20 } }
+                }
+            },
+            {
+                id: 'liuhuiwen',
+                name: '刘惠雯',
+                nick: 'Psyche',
+                hp: 90,
+                maxHp: 90,
+                energy: 0,
+                maxEnergy: 100,
+                energyPerTurn: 25,
+                image: '刘惠雯.jfif',
+                color: '#e91e63',
+                skills: {
+                    normal: { name: '🐔 臭鸡啄击', damage: 18, cost: 0 },
+                    skill: { name: '😢 忧郁光环', damage: 15, cost: 25, effect: { type: 'attackDebuff', turns: 2, amount: 0.5 } },
+                    ultimate: { name: '💥 炸炸炸终极形态', damage: 55, cost: 75, effect: { type: 'selfDamage', amount: 10 } }
+                }
+            },
+            {
+                id: 'huangxianglin',
+                name: '黄湘林',
+                nick: '黄湘林',
+                hp: 85,
+                maxHp: 85,
+                energy: 0,
+                maxEnergy: 100,
+                energyPerTurn: 30,
+                image: 'v.jfif',
+                color: '#34495e',
+                skills: {
+                    normal: { name: '👊 岳阳冷拳', damage: 17, cost: 0 },
+                    skill: { name: '⏰ 时间的痕迹', damage: 25, cost: 20, effect: { type: 'dot', damage: 5, turns: 3 } },
+                    ultimate: { name: '👁️ 沉默的凝视', damage: 45, cost: 70, effect: { type: 'stunChance', chance: 0.5, turns: 1 } }
+                }
+            },
+            {
+                id: 'liling',
+                name: '李玲',
+                nick: '褶皱',
+                hp: 110,
+                maxHp: 110,
+                energy: 0,
+                maxEnergy: 100,
+                energyPerTurn: 20,
+                image: '李玲.jfif',
+                color: '#1abc9c',
+                skills: {
+                    normal: { name: '💫 褶皱飞弹', damage: 14, cost: 0 },
+                    skill: { name: '🌀 空间褶皱', damage: 0, cost: 35, effect: { type: 'reflect', turns: 2, amount: 0.3 } },
+                    ultimate: { name: '☠️ 圣文森特的诅咒', damage: 35, cost: 85, effect: { type: 'drainEnergy' } }
+                }
+            }
+        ];
+
+        let gameState = {
+            phase: 'select',
+            player: null,
+            enemy: null,
+            turn: 'player',
+            log: [],
+            isProcessing: false,
+            playerStatus: {
+                stunned: 0,
+                attackDebuff: { turns: 0, amount: 0 },
+                dot: { damage: 0, turns: 0 },
+                reflect: { turns: 0, amount: 0 },
+                attackBuff: { turns: 0, amount: 0 },
+                skipNextTurn: false
+            },
+            enemyStatus: {
+                stunned: 0,
+                attackDebuff: { turns: 0, amount: 0 },
+                dot: { damage: 0, turns: 0 },
+                reflect: { turns: 0, amount: 0 },
+                attackBuff: { turns: 0, amount: 0 },
+                skipNextTurn: false
+            }
+        };
+
+        function initGame() {
+            renderCharacterSelect();
+            showIntroModal();
+        }
+        
+        function renderCharacterSelect() {
+            const grid = document.getElementById('characterGrid');
+            grid.innerHTML = characters.map(char => `
+                <div class="character-card" onclick="showCharacterDetail('${char.id}')" id="card-${char.id}">
+                    <img class="character-avatar" src="${char.image}" style="border-color: ${char.color}">
+                    <div class="character-name" style="color: ${char.color}">${char.name}</div>
+                    <div class="character-hp">❤️ 血量: ${char.hp}</div>
+                    <div class="character-skills-preview">
+                        <div class="skill-preview">⚡ ${char.skills.normal.name}</div>
+                        <div class="skill-preview">✨ ${char.skills.skill.name}</div>
+                        <div class="skill-preview">🔥 ${char.skills.ultimate.name}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function showIntroModal() {
+            document.getElementById('introModal').classList.add('active');
+        }
+        
+        function closeIntroModal() {
+            document.getElementById('introModal').classList.remove('active');
+        }
+        
+        function getEffectInfo(effect) {
+            const effectTypes = {
+                stun: { text: '对手眩晕1回合', color: '#9b59b6', type: 'control' },
+                stunChance: { text: '50%概率眩晕对手1回合', color: '#9b59b6', type: 'control' },
+                heal: { text: '回复20点血量', color: '#2ecc71', type: 'heal' },
+                selfDamage: { text: '自己掉10点血', color: '#e74c3c', type: 'damage' },
+                attackDebuff: { text: '对手攻击降低50%持续2回合', color: '#e67e22', type: 'debuff' },
+                dot: { text: '对手每回合掉5血持续3回合', color: '#e74c3c', type: 'damage' },
+                reflect: { text: '反弹30%伤害持续2回合', color: '#3498db', type: 'buff' },
+                drainEnergy: { text: '清空对手能量', color: '#9b59b6', type: 'control' },
+                skipNextTurn: { text: '自己下回合无法行动', color: '#e67e22', type: 'debuff' }
+            };
+            return effectTypes[effect.type] || { text: '无特殊效果', color: '#666', type: 'neutral' };
+        }
+        
+        function showCharacterDetail(id) {
+            const char = characters.find(c => c.id === id);
+            if (!char) return;
+            
+            const normalEffect = char.skills.normal.damage > 0 ? 
+                `<span style="color: #e74c3c">造成 ${char.skills.normal.damage} 点伤害</span>` : 
+                '<span style="color: #666">无伤害效果</span>';
+            
+            const skillEffectInfo = getEffectInfo(char.skills.skill.effect);
+            const skillEffect = `<span style="color: ${skillEffectInfo.color}">${skillEffectInfo.text}</span>`;
+            
+            const ultimateEffectInfo = getEffectInfo(char.skills.ultimate.effect);
+            const ultimateEffect = `<span style="color: ${ultimateEffectInfo.color}">${ultimateEffectInfo.text}</span>`;
+            
+            const detailHTML = `
+                <span class="modal-close" onclick="closeDetailModal()">✕</span>
+                <div class="character-detail-header">
+                    <img class="character-detail-avatar" src="${char.image}" style="border-color: ${char.color}">
+                    <div class="character-detail-name" style="color: ${char.color}">${char.name}</div>
+                    <div class="character-detail-nick">昵称：${char.nick}</div>
+                </div>
+                <div class="character-attrs">
+                    <span>❤️ 血量：${char.hp}</span>
+                    <span>⚡ 每回合能量：${char.energyPerTurn}</span>
+                </div>
+                <div class="skill-detail-section">
+                    <div class="skill-detail-title normal">🟢 普攻</div>
+                    <div class="skill-detail-content">
+                        <div><strong>${char.skills.normal.name}</strong></div>
+                        <div><span style="color: #e74c3c">伤害：${char.skills.normal.damage}</span></div>
+                        <div><span style="color: #3498db">能量消耗：${char.skills.normal.cost}</span></div>
+                        <div>效果：${normalEffect}</div>
+                    </div>
+                </div>
+                <div class="skill-detail-section">
+                    <div class="skill-detail-title skill">🔵 技能</div>
+                    <div class="skill-detail-content">
+                        <div><strong>${char.skills.skill.name}</strong></div>
+                        <div><span style="color: #e74c3c">伤害：${char.skills.skill.damage || 0}</span></div>
+                        <div><span style="color: #3498db">能量消耗：${char.skills.skill.cost}</span></div>
+                        <div>效果：${skillEffect}</div>
+                    </div>
+                </div>
+                <div class="skill-detail-section">
+                    <div class="skill-detail-title ultimate">🔴 大招</div>
+                    <div class="skill-detail-content">
+                        <div><strong>${char.skills.ultimate.name}</strong></div>
+                        <div><span style="color: #e74c3c">伤害：${char.skills.ultimate.damage || 0}</span></div>
+                        <div><span style="color: #3498db">能量消耗：${char.skills.ultimate.cost}</span></div>
+                        <div>效果：${ultimateEffect}</div>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn secondary" onclick="closeDetailModal()">返回选择</button>
+                    <button class="modal-btn success" onclick="showConfirmModal('${char.id}')">确认选择</button>
+                </div>
+            `;
+            
+            document.getElementById('detailContent').innerHTML = detailHTML;
+            document.getElementById('detailModal').classList.add('active');
+        }
+        
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('active');
+            document.querySelectorAll('.character-card').forEach(card => card.classList.remove('selected'));
+        }
+        
+        function showAllCharacters() {
+            let allContent = '';
+            
+            characters.forEach(char => {
+                const skillEffectInfo = getEffectInfo(char.skills.skill.effect);
+                const ultimateEffectInfo = getEffectInfo(char.skills.ultimate.effect);
+                
+                allContent += `
+                    <div style="background: #f8f9fa; border-radius: 15px; padding: 20px; margin-bottom: 20px; border-left: 5px solid ${char.color};">
+                        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px;">
+                            <img src="${char.image}" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid ${char.color}; object-fit: cover;">
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: bold; color: ${char.color};">${char.name}</div>
+                                <div style="color: #666;">昵称：${char.nick}</div>
+                                <div style="color: #666; font-size: 0.9rem;">❤️ ${char.hp} HP | ⚡ ${char.energyPerTurn}/回合</div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; font-size: 0.9rem;">
+                            <div style="background: white; padding: 12px; border-radius: 10px;">
+                                <div style="font-weight: bold; color: #2ecc71; margin-bottom: 8px;">🟢 普攻</div>
+                                <div style="font-weight: bold; margin-bottom: 5px;">${char.skills.normal.name}</div>
+                                <div style="color: #e74c3c;">伤害: ${char.skills.normal.damage}</div>
+                            </div>
+                            <div style="background: white; padding: 12px; border-radius: 10px;">
+                                <div style="font-weight: bold; color: #3498db; margin-bottom: 8px;">🔵 技能</div>
+                                <div style="font-weight: bold; margin-bottom: 5px;">${char.skills.skill.name}</div>
+                                <div style="color: #e74c3c;">伤害: ${char.skills.skill.damage || 0}</div>
+                                <div style="color: #3498db;">能量: ${char.skills.skill.cost}</div>
+                                <div style="color: ${skillEffectInfo.color}; font-size: 0.8rem;">${skillEffectInfo.text}</div>
+                            </div>
+                            <div style="background: white; padding: 12px; border-radius: 10px;">
+                                <div style="font-weight: bold; color: #e74c3c; margin-bottom: 8px;">🔴 大招</div>
+                                <div style="font-weight: bold; margin-bottom: 5px;">${char.skills.ultimate.name}</div>
+                                <div style="color: #e74c3c;">伤害: ${char.skills.ultimate.damage || 0}</div>
+                                <div style="color: #3498db;">能量: ${char.skills.ultimate.cost}</div>
+                                <div style="color: ${ultimateEffectInfo.color}; font-size: 0.8rem;">${ultimateEffectInfo.text}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('allCharactersContent').innerHTML = allContent;
+            document.getElementById('allCharactersModal').classList.add('active');
+        }
+        
+        function closeAllCharactersModal() {
+            document.getElementById('allCharactersModal').classList.remove('active');
+        }
+        
+        let pendingCharacterId = null;
+        
+        function showConfirmModal(id) {
+            const char = characters.find(c => c.id === id);
+            if (!char) return;
+            
+            pendingCharacterId = id;
+            document.getElementById('confirmCharacterName').textContent = char.name;
+            document.getElementById('confirmCharacterName').style.color = char.color;
+            closeDetailModal();
+            document.getElementById('confirmModal').classList.add('active');
+        }
+        
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+            pendingCharacterId = null;
+        }
+        
+        function confirmSelection() {
+            const selectedId = pendingCharacterId;
+            if (selectedId) {
+                closeConfirmModal();
+                startBattleWithCharacter(selectedId);
+            }
+        }
+        
+        function startBattleWithCharacter(id) {
+            const selectedChar = characters.find(c => c.id === id);
+            if (!selectedChar) return;
+            
+            const availableEnemies = characters.filter(c => c.id !== id);
+            const enemyChar = availableEnemies[Math.floor(Math.random() * availableEnemies.length)];
+            
+            gameState.player = JSON.parse(JSON.stringify(selectedChar));
+            gameState.enemy = JSON.parse(JSON.stringify(enemyChar));
+            gameState.phase = 'battle';
+            gameState.turn = 'player';
+            gameState.log = [];
+            gameState.isProcessing = false;
+            gameState.playerStatus = {
+                stunned: 0,
+                attackDebuff: { turns: 0, amount: 0 },
+                dot: { damage: 0, turns: 0 },
+                reflect: { turns: 0, amount: 0 },
+                attackBuff: { turns: 0, amount: 0 },
+                skipNextTurn: false
+            };
+            gameState.enemyStatus = {
+                stunned: 0,
+                attackDebuff: { turns: 0, amount: 0 },
+                dot: { damage: 0, turns: 0 },
+                reflect: { turns: 0, amount: 0 },
+                attackBuff: { turns: 0, amount: 0 },
+                skipNextTurn: false
+            };
+            
+            showPhase('battle');
+            
+            addLog(`🎮 战斗开始！${gameState.player.name} VS ${gameState.enemy.name}！`, 'system');
+            
+            updateBattleUI();
+        }
+
+        function showPhase(phase) {
+            document.getElementById('phaseSelect').style.display = phase === 'select' ? 'block' : 'none';
+            document.getElementById('phaseBattle').style.display = phase === 'battle' ? 'block' : 'none';
+            document.getElementById('phaseResult').style.display = phase === 'result' ? 'block' : 'none';
+            gameState.phase = phase;
+        }
+
+        function updateBattleUI() {
+            document.getElementById('playerAvatar').src = gameState.player.image;
+            document.getElementById('playerAvatar').style.borderColor = gameState.player.color;
+            document.getElementById('playerName').textContent = gameState.player.name;
+            document.getElementById('playerName').style.color = gameState.player.color;
+
+            document.getElementById('enemyAvatar').src = gameState.enemy.image;
+            document.getElementById('enemyAvatar').style.borderColor = gameState.enemy.color;
+            document.getElementById('enemyName').textContent = gameState.enemy.name;
+            document.getElementById('enemyName').style.color = gameState.enemy.color;
+
+            updateHpBar('player');
+            updateHpBar('enemy');
+            updateEnergyBar('player');
+            updateEnergyBar('enemy');
+
+            document.getElementById('normalSkillName').textContent = gameState.player.skills.normal.name;
+            document.getElementById('skillName').textContent = gameState.player.skills.skill.name;
+            document.getElementById('skillCostText').textContent = `能量: ${gameState.player.skills.skill.cost}`;
+            document.getElementById('ultimateName').textContent = gameState.player.skills.ultimate.name;
+            document.getElementById('ultimateCostText').textContent = `能量: ${gameState.player.skills.ultimate.cost}`;
+
+            updateSkillButtons();
+            updateStatusEffects();
+            updateTurnIndicator();
+        }
+
+        function updateHpBar(who) {
+            const char = who === 'player' ? gameState.player : gameState.enemy;
+            const hpFill = document.getElementById(`${who}HpFill`);
+            const hpText = document.getElementById(`${who}HpText`);
+            const percentage = (char.hp / char.maxHp) * 100;
+            hpFill.style.width = `${Math.max(0, percentage)}%`;
+            hpText.textContent = `${Math.max(0, char.hp)}/${char.maxHp}`;
+
+            if (percentage < 30) {
+                hpFill.parentElement.classList.add('hp-low');
+            } else {
+                hpFill.parentElement.classList.remove('hp-low');
+            }
+        }
+
+        function updateEnergyBar(who) {
+            const char = who === 'player' ? gameState.player : gameState.enemy;
+            const energyFill = document.getElementById(`${who}EnergyFill`);
+            const energyText = document.getElementById(`${who}EnergyText`);
+            energyFill.style.width = `${char.energy}%`;
+            energyText.textContent = `${char.energy}/100`;
+        }
+
+        function updateSkillButtons() {
+            const canAct = gameState.turn === 'player' && !gameState.isProcessing && gameState.playerStatus.stunned === 0;
+            document.getElementById('btnNormal').disabled = !canAct;
+            document.getElementById('btnSkill').disabled = !canAct || gameState.player.energy < gameState.player.skills.skill.cost;
+            document.getElementById('btnUltimate').disabled = !canAct || gameState.player.energy < gameState.player.skills.ultimate.cost;
+        }
+
+        function updateStatusEffects() {
+            renderStatusEffects('player', gameState.playerStatus);
+            renderStatusEffects('enemy', gameState.enemyStatus);
+        }
+
+        function renderStatusEffects(who, status) {
+            const container = document.getElementById(`${who}Status`);
+            let effects = [];
+            
+            if (status.stunned > 0) effects.push({ text: `💫 眩晕 ${status.stunned}回合`, bg: '#9b59b6' });
+            if (status.attackDebuff.turns > 0) effects.push({ text: `📉 攻击-${status.attackDebuff.amount * 100}% ${status.attackDebuff.turns}回合`, bg: '#e74c3c' });
+            if (status.dot.turns > 0) effects.push({ text: `🔥 掉血 ${status.dot.damage}/${status.dot.turns}回合`, bg: '#e67e22' });
+            if (status.reflect.turns > 0) effects.push({ text: `🛡️ 反弹 ${status.reflect.amount * 100}% ${status.reflect.turns}回合`, bg: '#3498db' });
+            if (status.attackBuff.turns > 0) effects.push({ text: `📈 攻击+${status.attackBuff.amount * 100}% ${status.attackBuff.turns}回合`, bg: '#2ecc71' });
+            if (status.skipNextTurn) effects.push({ text: `⏭️ 下回合跳过`, bg: '#7f8c8d' });
+
+            container.innerHTML = effects.map(e => `<span class="status-icon" style="background: ${e.bg}; color: white">${e.text}</span>`).join('');
+        }
+
+        function updateTurnIndicator() {
+            const indicator = document.getElementById('turnIndicator');
+            if (gameState.turn === 'player') {
+                indicator.textContent = '🎯 你的回合！';
+                indicator.className = 'turn-indicator player-turn';
+            } else {
+                indicator.textContent = '🤖 对手回合...';
+                indicator.className = 'turn-indicator enemy-turn';
+            }
+        }
+
+        function addLog(text, type = 'system') {
+            gameState.log.push({ text, type });
+            const logDiv = document.getElementById('battleLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = text;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function playerAttack(skillType) {
+            if (gameState.isProcessing || gameState.turn !== 'player') return;
+            gameState.isProcessing = true;
+
+            const skill = gameState.player.skills[skillType];
+            if (gameState.player.energy < skill.cost) {
+                gameState.isProcessing = false;
+                return;
+            }
+
+            gameState.player.energy -= skill.cost;
+            executeAttack('player', 'enemy', skillType, skill);
+        }
+
+        function executeAttack(attackerWho, defenderWho, skillType, skill) {
+            const attacker = attackerWho === 'player' ? gameState.player : gameState.enemy;
+            const defender = defenderWho === 'player' ? gameState.player : gameState.enemy;
+            const attackerStatus = attackerWho === 'player' ? gameState.playerStatus : gameState.enemyStatus;
+            const defenderStatus = defenderWho === 'player' ? gameState.playerStatus : gameState.enemyStatus;
+
+            let damage = skill.damage;
+
+            if (attackerStatus.attackBuff.turns > 0) {
+                damage = Math.floor(damage * (1 + attackerStatus.attackBuff.amount));
+            }
+
+            if (attackerStatus.attackDebuff.turns > 0) {
+                damage = Math.floor(damage * (1 - attackerStatus.attackDebuff.amount));
+            }
+
+            let reflectDamage = 0;
+            if (defenderStatus.reflect.turns > 0 && damage > 0) {
+                reflectDamage = Math.floor(damage * defenderStatus.reflect.amount);
+            }
+
+            if (damage > 0) {
+                defender.hp -= damage;
+                addLog(`${attacker.name} 使用 ${skill.name}，造成 ${damage} 点伤害！`, attackerWho);
+                shakeElement(`${defenderWho}Card`);
+            } else {
+                addLog(`${attacker.name} 使用 ${skill.name}！`, attackerWho);
+            }
+
+            if (reflectDamage > 0) {
+                attacker.hp -= reflectDamage;
+                addLog(`${defender.name} 反弹了 ${reflectDamage} 点伤害！`, defenderWho);
+                shakeElement(`${attackerWho}Card`);
+            }
+
+            if (skill.effect) {
+                applyEffect(skill.effect, attackerWho, defenderWho, attacker, defender);
+            }
+
+            updateBattleUI();
+
+            setTimeout(() => {
+                if (checkBattleEnd()) return;
+
+                if (attackerWho === 'player') {
+                    setTimeout(() => enemyTurn(), 800);
+                } else {
+                    processEndOfTurn();
+                }
+            }, 500);
+        }
+
+        function applyEffect(effect, attackerWho, defenderWho, attacker, defender) {
+            const attackerStatus = attackerWho === 'player' ? gameState.playerStatus : gameState.enemyStatus;
+            const defenderStatus = defenderWho === 'player' ? gameState.playerStatus : gameState.enemyStatus;
+
+            switch (effect.type) {
+                case 'stun':
+                    defenderStatus.stunned = effect.turns;
+                    addLog(`${defender.name} 被眩晕了 ${effect.turns} 回合！`, attackerWho);
+                    break;
+
+                case 'stunChance':
+                    if (Math.random() < effect.chance) {
+                        defenderStatus.stunned = effect.turns;
+                        addLog(`${defender.name} 被眩晕了 ${effect.turns} 回合！`, attackerWho);
+                    } else {
+                        addLog(`眩晕效果失败了...`, 'system');
+                    }
+                    break;
+
+                case 'heal':
+                    attacker.hp = Math.min(attacker.hp + effect.amount, attacker.maxHp);
+                    addLog(`${attacker.name} 恢复了 ${effect.amount} 点血量！`, attackerWho);
+                    if (effect.attackBuff) {
+                        attackerStatus.attackBuff = { turns: effect.turns, amount: effect.attackBuff };
+                        addLog(`${attacker.name} 攻击力提升 ${effect.attackBuff * 100}%，持续 ${effect.turns} 回合！`, attackerWho);
+                    }
+                    break;
+
+                case 'selfDamage':
+                    attacker.hp -= effect.amount;
+                    addLog(`${attacker.name} 自己受到了 ${effect.amount} 点伤害！`, 'system');
+                    break;
+
+                case 'attackDebuff':
+                    defenderStatus.attackDebuff = { turns: effect.turns, amount: effect.amount };
+                    addLog(`${defender.name} 攻击力降低 ${effect.amount * 100}%，持续 ${effect.turns} 回合！`, attackerWho);
+                    break;
+
+                case 'dot':
+                    defenderStatus.dot = { damage: effect.damage, turns: effect.turns };
+                    addLog(`${defender.name} 每回合掉血 ${effect.damage}，持续 ${effect.turns} 回合！`, attackerWho);
+                    break;
+
+                case 'reflect':
+                    attackerStatus.reflect = { turns: effect.turns, amount: effect.amount };
+                    addLog(`${attacker.name} 获得反弹 ${effect.amount * 100}% 伤害效果，持续 ${effect.turns} 回合！`, attackerWho);
+                    break;
+
+                case 'drainEnergy':
+                    defender.energy = 0;
+                    addLog(`${defender.name} 的能量被清空了！`, attackerWho);
+                    break;
+
+                case 'skipNextTurn':
+                    attackerStatus.skipNextTurn = true;
+                    addLog(`${attacker.name} 下回合无法行动！`, 'system');
+                    break;
+            }
+        }
+
+        function enemyTurn() {
+            gameState.turn = 'enemy';
+            updateBattleUI();
+
+            if (gameState.enemyStatus.stunned > 0) {
+                addLog(`${gameState.enemy.name} 处于眩晕状态，无法行动！`, 'system');
+                setTimeout(() => processEndOfTurn(), 800);
+                return;
+            }
+
+            let availableSkills = ['normal'];
+            if (gameState.enemy.energy >= gameState.enemy.skills.skill.cost) availableSkills.push('skill');
+            if (gameState.enemy.energy >= gameState.enemy.skills.ultimate.cost) availableSkills.push('ultimate');
+
+            const skillChoice = availableSkills[Math.floor(Math.random() * availableSkills.length)];
+            const skill = gameState.enemy.skills[skillChoice];
+
+            gameState.enemy.energy -= skill.cost;
+
+            setTimeout(() => {
+                executeAttack('enemy', 'player', skillChoice, skill);
+            }, 600);
+        }
+
+        function processEndOfTurn() {
+            processDotDamage('player');
+            processDotDamage('enemy');
+
+            decayStatusEffects();
+
+            if (!gameState.playerStatus.skipNextTurn) {
+                gameState.player.energy = Math.min(gameState.player.energy + gameState.player.energyPerTurn, 100);
+            } else {
+                gameState.playerStatus.skipNextTurn = false;
+            }
+            gameState.enemy.energy = Math.min(gameState.enemy.energy + gameState.enemy.energyPerTurn, 100);
+
+            if (checkBattleEnd()) return;
+
+            gameState.turn = 'player';
+            gameState.isProcessing = false;
+
+            if (gameState.playerStatus.stunned > 0) {
+                addLog(`${gameState.player.name} 处于眩晕状态！`, 'system');
+                setTimeout(() => {
+                    gameState.playerStatus.stunned--;
+                    updateBattleUI();
+                    setTimeout(() => enemyTurn(), 800);
+                }, 800);
+            } else {
+                updateBattleUI();
+            }
+        }
+
+        function processDotDamage(who) {
+            const status = who === 'player' ? gameState.playerStatus : gameState.enemyStatus;
+            const char = who === 'player' ? gameState.player : gameState.enemy;
+            
+            if (status.dot.turns > 0) {
+                char.hp -= status.dot.damage;
+                addLog(`${char.name} 受到持续伤害 ${status.dot.damage} 点！`, 'system');
+                shakeElement(`${who}Card`);
+            }
+        }
+
+        function decayStatusEffects() {
+            if (gameState.playerStatus.stunned > 0) gameState.playerStatus.stunned--;
+            if (gameState.enemyStatus.stunned > 0) gameState.enemyStatus.stunned--;
+            
+            if (gameState.playerStatus.attackDebuff.turns > 0) gameState.playerStatus.attackDebuff.turns--;
+            if (gameState.enemyStatus.attackDebuff.turns > 0) gameState.enemyStatus.attackDebuff.turns--;
+            
+            if (gameState.playerStatus.dot.turns > 0) gameState.playerStatus.dot.turns--;
+            if (gameState.enemyStatus.dot.turns > 0) gameState.enemyStatus.dot.turns--;
+            
+            if (gameState.playerStatus.reflect.turns > 0) gameState.playerStatus.reflect.turns--;
+            if (gameState.enemyStatus.reflect.turns > 0) gameState.enemyStatus.reflect.turns--;
+            
+            if (gameState.playerStatus.attackBuff.turns > 0) gameState.playerStatus.attackBuff.turns--;
+            if (gameState.enemyStatus.attackBuff.turns > 0) gameState.enemyStatus.attackBuff.turns--;
+        }
+
+        function shakeElement(id) {
+            const el = document.getElementById(id);
+            el.classList.add('damage-shake');
+            setTimeout(() => el.classList.remove('damage-shake'), 500);
+        }
+
+        function checkBattleEnd() {
+            if (gameState.player.hp <= 0) {
+                endBattle(false);
+                return true;
+            }
+            if (gameState.enemy.hp <= 0) {
+                endBattle(true);
+                return true;
+            }
+            updateBattleUI();
+            return false;
+        }
+
+        function endBattle(playerWin) {
+            gameState.phase = 'result';
+            setTimeout(() => {
+                showPhase('result');
+                const resultText = document.getElementById('resultText');
+                if (playerWin) {
+                    resultText.textContent = '🎉 胜利！';
+                    resultText.className = 'result-text win';
+                } else {
+                    resultText.textContent = '💀 失败...';
+                    resultText.className = 'result-text lose';
+                }
+            }, 800);
+        }
+
+        function restartGame() {
+            gameState = {
+                phase: 'select',
+                player: null,
+                enemy: null,
+                turn: 'player',
+                log: [],
+                isProcessing: false,
+                playerStatus: {
+                    stunned: 0,
+                    attackDebuff: { turns: 0, amount: 0 },
+                    dot: { damage: 0, turns: 0 },
+                    reflect: { turns: 0, amount: 0 },
+                    attackBuff: { turns: 0, amount: 0 },
+                    skipNextTurn: false
+                },
+                enemyStatus: {
+                    stunned: 0,
+                    attackDebuff: { turns: 0, amount: 0 },
+                    dot: { damage: 0, turns: 0 },
+                    reflect: { turns: 0, amount: 0 },
+                    attackBuff: { turns: 0, amount: 0 },
+                    skipNextTurn: false
+                }
+            };
+            document.getElementById('battleLog').innerHTML = '';
+            showPhase('select');
+            renderCharacterSelect();
+        }
+
+        initGame();
+        
+        document.getElementById('introModal').addEventListener('click', function(e) {
+            if (e.target === this) closeIntroModal();
+        });
+        
+        document.getElementById('detailModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDetailModal();
+        });
+        
+        document.getElementById('confirmModal').addEventListener('click', function(e) {
+            if (e.target === this) closeConfirmModal();
+        });
+        
+        document.getElementById('allCharactersModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAllCharactersModal();
+        });
+    </script>
+</body>
+</html>
